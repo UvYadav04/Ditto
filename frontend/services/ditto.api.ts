@@ -93,7 +93,7 @@ async function request<T>(path: string, body?: unknown): Promise<T> {
   let response: Response;
   let attempt = 0;
 
-  for (;;) {
+  for (; ;) {
     attempt += 1;
     // Only GETs are retried. POST /analyze is not idempotent — retrying it
     // could queue a second (paid) analysis for the same repo.
@@ -192,7 +192,12 @@ export async function analyzeRepo(repoUrl: string): Promise<AnalyzeResponse> {
   // github.com URL and rejects the `owner/name` shorthand, so we always send
   // the canonical form even though the paste box accepts the shorthand.
   const ref = parseGitHubRepo(repoUrl);
-  const canonicalUrl = ref ? `https://github.com/${ref.owner}/${ref.name}` : repoUrl.trim();
+  const canonicalUrl = ref
+    ? `https://github.com/${ref.owner}/${ref.name}${ref.ref
+      ? `/${ref.ref.kind}/${ref.ref.value.split('/').map(encodeURIComponent).join('/')}`
+      : ''
+    }`
+    : repoUrl.trim();
 
   if (SOURCE === 'mock') {
     await sleep(MOCK_LATENCY_MS / 3);

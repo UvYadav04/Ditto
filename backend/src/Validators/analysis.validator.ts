@@ -1,6 +1,8 @@
 import { z } from 'zod';
 
 import { BadRequestError } from '../Utils/errors/AppError.js';
+import logger from '../Config/logger.js';
+
 
 /** Reusable Mongo ObjectId validator. */
 const objectId = z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid id');
@@ -88,6 +90,10 @@ export const parseGitHubUrl = (raw: string): ParsedRepo => {
     throw new BadRequestError('That is not a repository URL — expected github.com/owner/repo.');
   }
 
+  logger.info(`raw: ${raw}`);
+  logger.info(`url.pathname: ${url.pathname}`);
+  logger.info(`Segments: ${segments}`);
+
   const owner = segments[0];
   const name = segments[1].replace(/\.git$/i, '');
 
@@ -100,7 +106,7 @@ export const parseGitHubUrl = (raw: string): ParsedRepo => {
 
   let ref: string | null = null;
   if (segments.length >= 4 && (segments[2] === 'tree' || segments[2] === 'commit')) {
-    ref = decodeURIComponent(segments[3]);
+    ref = segments.slice(3).map(decodeURIComponent).join('/');
   }
 
   // A pull-request URL: github.com/owner/repo/pull/<n>. `owner` is the real repo

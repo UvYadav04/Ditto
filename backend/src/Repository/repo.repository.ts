@@ -26,8 +26,8 @@ class RepoRepository extends CrudRepository<IRepo> {
   }
 
   /** Most recently indexed snapshot for a repo, across commits. */
-  async findLatest(owner: string, name: string): Promise<HydratedDocument<IRepo> | null> {
-    return this.model.findOne({ owner, name }).sort({ indexedAt: -1 }).exec();
+  async findLatest(owner: string, name: string, ref: string | null): Promise<HydratedDocument<IRepo> | null> {
+    return this.model.findOne({ owner, name, ref: ref || null }).sort({ indexedAt: -1 }).exec();
   }
 
   /** Every indexed repo, newest first. Powers `GET /api/v1/repos`. */

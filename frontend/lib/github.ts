@@ -10,17 +10,30 @@
 
 const NAME = /^[A-Za-z0-9._-]+$/;
 
-export type GitHubRepoRef = { owner: string; name: string };
+export type GitHubRepoRef = {
+  owner: string;
+  name: string;
+  ref?: {
+    kind: 'tree' | 'commit';
+    value: string;
+  };
+};
 
 export function parseGitHubRepo(input: string): GitHubRepoRef | null {
   const trimmed = input.trim();
   if (trimmed === '') return null;
 
+  console.log(input)
+
   let rest: string;
   const onGithub = trimmed.match(/^(?:https?:\/\/)?(?:www\.)?github\.com\/(.+)$/i);
+
   if (onGithub) {
     rest = onGithub[1];
-  } else if (/^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed) || /\.[a-z]{2,}\//i.test(trimmed)) {
+  } else if (
+    /^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed) ||
+    /\.[a-z]{2,}\//i.test(trimmed)
+  ) {
     // Looks like a URL, but not github.com — a different host, so reject.
     return null;
   } else {
@@ -29,17 +42,31 @@ export function parseGitHubRepo(input: string): GitHubRepoRef | null {
   }
 
   rest = rest
-    .replace(/[?#].*$/, '') // drop query/hash
-    .replace(/\.git$/i, '')
+    .replace(/[?#].*$/, '')
     .replace(/^\/+|\/+$/g, '');
 
   const parts = rest.split('/').filter(Boolean);
   if (parts.length < 2) return null;
 
-  const [owner, name] = parts;
+  const [owner, rawName, kind, ...refParts] = parts;
+  const name = rawName.replace(/\.git$/i, '');
+
   if (!NAME.test(owner) || !NAME.test(name)) return null;
+
+  if ((kind === 'tree' || kind === 'commit') && refParts.length > 0) {
+    return {
+      owner,
+      name,
+      ref: {
+        kind,
+        value: refParts.join('/'),
+      },
+    };
+  }
+
   return { owner, name };
 }
+
 
 export function isValidGitHubRepo(input: string): boolean {
   return parseGitHubRepo(input) !== null;

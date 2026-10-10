@@ -99,11 +99,15 @@ class AnalysisService {
    * already have is free.
    */
   async analyze(repoUrl: string, ip?: string): Promise<AnalyzeResult> {
+    logger.info(`raw: ${repoUrl}`);
     const { owner, name, ref } = parseGitHubUrl(repoUrl);
+
+    logger.info(`Analyzing repo: ${repoUrl} with ip: ${ip}`);
+    logger.info(`Owner: ${owner}, Name: ${name}, Ref: ${ref}`);
 
     // Dedup: a repo we already analysed is instant and free — no job, no spend,
     // and no quota charged.
-    const existing = await this.repoRepository.findLatest(owner, name);
+    const existing = await this.repoRepository.findLatest(owner, name, ref);
     if (existing) {
       logger.info(`dedup hit for ${owner}/${name} → repo ${existing._id.toString()}`);
       return { jobId: null, repoId: existing._id.toString() };
@@ -175,7 +179,7 @@ class AnalysisService {
         if (elapsedMs() > AppConfig.LIVE_DEADLINE_MS) {
           throw new AppError(
             `Analysis exceeded the ${Math.round(AppConfig.LIVE_DEADLINE_MS / 1000)}s live time budget ` +
-              `at the "${stage}" stage. Try a smaller repo.`,
+            `at the "${stage}" stage. Try a smaller repo.`,
             StatusCodes.REQUEST_TIMEOUT
           );
         }
